@@ -1,0 +1,31 @@
+{
+  "name": "@banklink/sdk",
+  "version": "0.1.0",
+  "description": "Official BankLink SDK for TypeScript and Node.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "banklink",
+    "open-banking",
+    "south-africa",
+    "fintech"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aurvex-labs/banklink-node.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
