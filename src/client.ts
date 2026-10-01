@@ -1,22 +1,23 @@
 import {
-  BankLinkError,
   AuthenticationError,
+  BanklinkError,
   InsufficientCreditsError,
   NotFoundError,
+  OrgNotVerifiedError,
   RateLimitError,
 } from './errors';
-import type { BankLinkOptions } from './types';
+import type { BanklinkOptions } from './types';
 
 const DEFAULT_BASE_URL = 'https://api.banklink.co.za/v1';
 const DEFAULT_TIMEOUT = 30_000;
-const SDK_VERSION = '0.1.0';
+const SDK_VERSION = '0.2.0';
 
 export class Client {
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly timeout: number;
 
-  constructor(opts: BankLinkOptions) {
+  constructor(opts: BanklinkOptions) {
     this.apiKey = opts.apiKey;
     this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
     this.timeout = opts.timeout ?? DEFAULT_TIMEOUT;
@@ -44,7 +45,7 @@ export class Client {
     } catch (err) {
       clearTimeout(timer);
       if (err instanceof Error && err.name === 'AbortError') {
-        throw new BankLinkError(
+        throw new BanklinkError(
           `Request timed out after ${this.timeout}ms`,
           'timeout',
           0,
@@ -57,12 +58,24 @@ export class Client {
 
     if (!response.ok) {
       let errorMessage: string | undefined;
+      let errorCode: string | undefined;
       try {
-        const errorBody = (await response.json()) as { error?: string; message?: string };
-        errorMessage = errorBody.error ?? errorBody.message;
+        // v1 errors are { error: { code, message } }; tolerate { error: "..." } too.
+        const errorBody = (await response.json()) as {
+          error?: string | { code?: string; message?: string };
+          message?: string;
+        };
+        if (errorBody.error && typeof errorBody.error === 'object') {
+          errorMessage = errorBody.error.message;
+          errorCode = errorBody.error.code;
+        } else {
+          errorMessage = errorBody.error ?? errorBody.message;
+        }
       } catch {
         // ignore JSON parse failures on error body
       }
+
+      if (errorCode === 'org_not_verified') throw new OrgNotVerifiedError(errorMessage);
 
       switch (response.status) {
         case 401:
@@ -74,9 +87,9 @@ export class Client {
         case 429:
           throw new RateLimitError(errorMessage);
         default:
-          throw new BankLinkError(
+          throw new BanklinkError(
             errorMessage ?? `Unexpected error (HTTP ${response.status})`,
-            'api_error',
+            errorCode ?? 'api_error',
             response.status,
           );
       }
