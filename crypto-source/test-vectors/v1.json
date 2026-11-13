@@ -1,0 +1,122 @@
+{
+  "description": "BankLink credential ceremony test vectors, suite v1 (contract docs/architecture/ceremony/00 §14). Frozen: never regenerate with different values.",
+  "suite": {
+    "kdf": "HKDF-SHA256",
+    "kem": "DHKEM(X25519, HKDF-SHA256)",
+    "aead": "AES-256-GCM",
+    "sig": "Ed25519",
+    "canonicalJson": "RFC 8785"
+  },
+  "customerKeys": {
+    "seedHex": "990b02fd452fa1620c1304e232322df317b1bdff6082d6a4337a10ee91e2153c",
+    "seedText": "blseed_v1_mQsC_UUvoWIMEwTiMjIt8xexvf9ggtakM3oQ7pHiFTw",
+    "encPrivHex": "b990934edf12e85d22c769872d7a00351168570d76943d4a60061aecd911126a",
+    "sigPrivHex": "83038c485c7983e3e9fac4e343aef9bfe40749988978c64a6b9a3c3a9f7f57b2",
+    "encPub": "SH7wbraUmB-r8rubLHjPFqdXuDo_GAW2XBfLMuTf9zE",
+    "sigPub": "Z3hIrVODvoBxzCOFvRyd-IalDjk6-KM-QrHFkPgBH1Q",
+    "kid": "ck_Qezept0RUnU2Tes1s-twAN"
+  },
+  "padding": {
+    "inputUtf8": "hello",
+    "paddedLength": 512,
+    "paddedPrefixHex": "0000000568656c6c6f"
+  },
+  "signingBytes": {
+    "domain": "bl/c/v1",
+    "obj": {
+      "orgId": "org_vector",
+      "profileId": "11111111-2222-4333-8444-555555555555",
+      "bankId": "fnb",
+      "credentialVersion": 1
+    },
+    "utf8": "bl/c/v1\n{\"bankId\":\"fnb\",\"credentialVersion\":1,\"orgId\":\"org_vector\",\"profileId\":\"11111111-2222-4333-8444-555555555555\"}"
+  },
+  "envelope": {
+    "meta": {
+      "orgId": "org_vector",
+      "profileId": "11111111-2222-4333-8444-555555555555",
+      "bankId": "fnb",
+      "credentialVersion": 1
+    },
+    "plaintext": {
+      "v": 1,
+      "fields": {
+        "username": "vector-user",
+        "password": "vector-pass-123"
+      }
+    },
+    "dekHex": "8335c0c70ac4c3b6b8c716463f8957335a8b7cc18e59fe7a86b1db17f1d608a2",
+    "C": "Jd_vBtcBb3MCNzMHgoAcyEUU7RMRaUzu0Au8-wDKM0cPiN3J2xpXdf4AI4R2OGTTIvY2cqe5xhL9de2GjFurhiWNYy-B-4Q4ifoRE9B-u51vKL9CBYEp-xKP7jDbClmb4KnYJcSz7r5xGdsB1ENVQKDNKc7VfHqQsY5OR101ValiHC-vUtmYj6vBGByDny7jMEHR7KtA2TTnJP-wF-VylTZYClP0QZIJ2F_RhAcbOQDWXSHnS6kP08g2bw9gWajxPmWy82suauNXHllNfOz6R2AE8Dn56w6rB5MqhBxFAa556cwdCO3eHS_88aP-J1rHBfjUBh5eTXnWBWVq-Rc2qOILqvTqb_JhCPxB89lqJz7JJQEoQmanxwmFkGvat7QkM0HzOPk3Dkpbz7FcJiB6s0kIH_BKtcqfX9MT5m-zp7dmwG7dCJo_TzDTuo5d3uQNCrUCrkNfYyAJPyHubLj62OLPehb5814KuNvKIax_kCSwfnN5CHQhPosCGiR0KL9j-qDk8EeqVIXccVxrRe_jHycYkkehF6E8vgSIZm5sTd4lk4yO9PZ40Ltgi38HpVEumQCTrvOTIkDwVq-LSTWMvpAlaJpNBLlNKEtKc7hzj28hnoaFjvM7e8oioslBr1f2zWCIZuqg4tni7TCMTTbHlHG2I1KVEU8ej2dDcfw7l_5m-xvm5SHfD0B0nQ9L9pfLibtjrVg9LzbdhnV3",
+    "W": "QsxTf9LkNDdRSvxEAVxWYDB5TQxMazzJyMxMR04L3kwFoOCE9zvZZCBH8MRRIq22oI0QWD1IOx1grrBQs9RtMBasMu6Ah0IBev-dhEB-j90",
+    "note": "C is deterministic given dek and nonce (first 12 bytes). W must OPEN with encPriv to dekHex; reproducing W byte-for-byte requires HPKE DeriveKeyPair(ikm) for the ephemeral key."
+  },
+  "host": {
+    "privateKeyHex": "8b536fb5bca729750e8b9574bf9796aa71e5e0160b7993d4236a25e4fd68924f",
+    "publicKey": "yuXhn0B940C0rTNhiRb6XjeFdcpTJ7P2kFDSUH3NAP0",
+    "hostKeyId": "wh_vWZgR7sidrMwgPBe"
+  },
+  "ticket": {
+    "ticket": {
+      "v": 1,
+      "type": "bl.ticket",
+      "jobId": "job_vector",
+      "fetchId": "fetch_vector",
+      "orgId": "org_vector",
+      "profileId": "11111111-2222-4333-8444-555555555555",
+      "bankId": "fnb",
+      "operation": "sync",
+      "releaseMode": "dek",
+      "credentialVersion": 1,
+      "workerTempPub": "ioB5zR3NVpSPv1hgczT5QDYFqFG7g_27z8eLfNp5DgE",
+      "hostKeyId": "wh_vWZgR7sidrMwgPBe",
+      "issuedAt": "2026-11-04T10:00:00.000Z",
+      "expiresAt": "2026-11-04T10:10:00.000Z"
+    },
+    "ticketSig": "mE006QGn6J0hV3eEQgqTldRecg8YzpQVhiUCspWzHUrxEjd3hpnQ5wieTW3Vj9NlvGtsd8f4xoTT_2iXXiOaAQ",
+    "ticketHash": "ltG0gkbrztQky8ApqITmzNVIUG11uxIW92H6F62w7Dg",
+    "workerTempPrivHex": "93c98bbf6e935be3a7155e6c16e5e56e48a8d34378c8c972245b7d72a0d74bc6"
+  },
+  "release": {
+    "plaintext": {
+      "v": 1,
+      "type": "bl.release",
+      "ticketHash": "ltG0gkbrztQky8ApqITmzNVIUG11uxIW92H6F62w7Dg",
+      "mode": "dek",
+      "dek": "gzXAxwrEw7a4xxZGP4lXM1qLfMGOWf56hrHbF_HWCKI",
+      "customer": {
+        "kid": "ck_Qezept0RUnU2Tes1s-twAN",
+        "encPub": "SH7wbraUmB-r8rubLHjPFqdXuDo_GAW2XBfLMuTf9zE",
+        "sigPub": "Z3hIrVODvoBxzCOFvRyd-IalDjk6-KM-QrHFkPgBH1Q"
+      },
+      "request": {
+        "fromDate": "2026-10-01"
+      }
+    },
+    "sealedRelease": "V21zn1VqJuTCy_vRrC2m8b3wv4_A2ViaLBopF7hc7HZVD5_QVPE99HzIIDhf9K9HLpP5VOHCnwl5wvIYKvoHrZZJ4B3Tx-8yXO5miHSXRsV3Fa9FmAkN9cnTkXolpe8lMcH3rgbYOFwHsUdxjoqscDMNjFi1UffFSDaLOFwFPzVWTiB9Zqv_oCfgj7eogOnPpBfB8KUOPyQ1bYfiC24InyFVaEmJ2jhyR8jlI5LZBk7pKEzeNRHmn5NE7mYUsSsthw0wBN3E1CladRHq83JFSSZiY9JF3l4GgcUmSwjuHkY2fTt0Ua_pa8DxzhqNjAMNOHBi8stmpVR67dKHFqJaL1Kv87F4BbR7YwVVR2tKj-dnVelhH2v_u8l8VyOFW5ceVmAY7fBT16deyLZ2Ev2J4XDelvCQTtgN__Tc4XQxfqvDBQ8SuE-xJ2CO_wG-uH14AZeOLmsNByZBq4VAg96RLo6W2GZpZWwqEgyi9Dtv0c0XHWK19O-XJEObcjKyVr9pAajSN2JzrMs",
+    "releaseHash": "vVslSYC5F63AyU178jIkiop-rho8uGS0fOEeU7YK7CY"
+  },
+  "approval": {
+    "approval": {
+      "v": 1,
+      "type": "bl.approval",
+      "fetchId": "fetch_vector",
+      "ticketHash": "ltG0gkbrztQky8ApqITmzNVIUG11uxIW92H6F62w7Dg",
+      "releaseHash": "vVslSYC5F63AyU178jIkiop-rho8uGS0fOEeU7YK7CY",
+      "kid": "ck_Qezept0RUnU2Tes1s-twAN",
+      "decidedAt": "2026-11-04T10:00:00.000Z"
+    },
+    "approvalSig": "mUxkB0UgWvkPu52Yf4ZxLwyHqfFpng7YG-7xsTu2dPXhqEZHlcZDZGBBkiIqmlbswdjiqtCEMXyDT8Vjffp-Dw"
+  },
+  "result": {
+    "data": {
+      "transactions": [
+        {
+          "date": "2026-11-01",
+          "amount": -12.5,
+          "description": "coffee"
+        }
+      ]
+    },
+    "sealedResult": "ThoP9Fj_h0QQsuDv5OuBpWybUDudR4bLel3FH9S7Zg0zHAcO-FAkgEDAFsEpBZ84f2KpKSUrFSz8KoE5a7Sv6O705cOE0b8UUZ48tazQkCJUKlBpk1wFuQP8wbLv2-DXM2I1btwAlbPX6LkgSEZhgX-r0hw2LkrcqRQm41KFBClc9cO5lROBuJvwz_R2TnHskwbHnFm6Xb1aWjxtbnmFmx7f49G2AZ7OyTSSoCI4sb0wLBaY-fqm7Ejm8ivj1WjzCgYucCuktzw"
+  }
+}

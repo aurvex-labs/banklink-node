@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-11-13
+
+- Add `BanklinkV2` for customer-held keys, encrypted profiles, sealed jobs and local result decryption. V2 requires an enabled organisation and an explicitly scoped live API key.
+- One-off `profiles.syncOnce` uses a throwaway key and needs no saved customer seed.
+- Add `onStatus` progress events, including bank-app approval deadlines and resends.
+- Bundle crypto 0.2.1 with two pinned production worker roots; verify signed worker lists and tickets before releasing credentials.
+- Add `FileVersionCache` via `@banklink/sdk/local`. The default export retains v1 compatibility and the 0.2.0 webhook helpers.
+- CLI and MCP remain on hold: no executable, MCP export, or CLI/MCP build files are published.
+
 ## 0.2.0 — 2026-10-01
 
 ### Added
