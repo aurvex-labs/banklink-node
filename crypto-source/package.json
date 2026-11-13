@@ -1,0 +1,51 @@
+{
+  "name": "@banklink/crypto",
+  "version": "0.2.1",
+  "description": "BankLink two-party credential ceremony: customer-held keys, sealed releases, worker tickets. No custom cryptography; built on @noble/* and @hpke/core.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "test-vectors",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "vectors:generate": "tsx tools/generate-vectors.ts",
+    "tools": "tsx tools/ceremony-tools.ts",
+    "vectors:generate:rewrap": "tsx tools/generate-rewrap-vectors.ts",
+    "prepublishOnly": "npm run build && node tools/check-release.mjs"
+  },
+  "dependencies": {
+    "@hpke/core": "1.10.0",
+    "@hpke/dhkem-x25519": "1.8.0",
+    "@noble/ciphers": "2.4.0",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "canonicalize": "5.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "tsup": "9.0.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  }
+}

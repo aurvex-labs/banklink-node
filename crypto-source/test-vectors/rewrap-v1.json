@@ -1,0 +1,40 @@
+{
+  "description": "Banklink ceremony v1: customer-key rotation by local re-wrap (contract 00 §17). C and credentialVersion unchanged; only W changes.",
+  "oldKey": {
+    "seedText": "blseed_v1_pRguP42H-FaduwnJqDbo5SvKQ2cc_4NlYYidv98226Q",
+    "kid": "ck_nFYIpqbN5nse1k-J0bVvmo",
+    "sigPub": "qJkovA7g_PdDph5Z7i-3_TPWcA-xbgA4SaUIbtTjmYM"
+  },
+  "newKey": {
+    "seedText": "blseed_v1_r4Q-fKzuQtDMiyIthMImYzjFkBVfN9OGHgIzsQULKo0",
+    "kid": "ck_rRS-wSaseSweYnUVcidVUB",
+    "encPub": "_oQlRvFmqru0jHdEy2BigtV06b6U5i-p1121PXQzMTs",
+    "sigPub": "mpBQQu_RTTJ9a3sndXBLpM_kLFPITqRtn-Ppz2Eh9M0"
+  },
+  "meta": {
+    "orgId": "org_vector",
+    "profileId": "11111111-2222-4333-8444-555555555555",
+    "bankId": "fnb",
+    "credentialVersion": 3
+  },
+  "dekHex": "c33cdb8436bfc2a501f9cfd4a9a261fa00c77f5d1286162c2b882b309a8696cc",
+  "before": {
+    "C": "XZGhC0aUt1LBuDE2Za-akD1ym7BNBBRw19oK3fY6jvaICYKJQ9rY8BhrTaJwyAYM9jSm8pLi9nnp3XwgGH7UyOfdjbsRKVKjJednUmDSdz9keNolBaFWYFZXThApwVLV6w8XQN6ykr1pHr797oALKqL4U7LPOfpHwQWgJACM1-NoGK4jD7GesQ4otD1g0CL81NCceKbp-jGpW7thj0CecmYwEFQHiBR8t375lqLUErdhwrJkLBlte6bnxtJSYWw7SaRjsCzA2hDmj_bDbfWpLlDI5M5uifjz0_jS8f22DXTRsFk9YqclXlkE6a44WDzEhESTiKbucqvnn_BWrjPlsvUd80pFNlL3fp33PWmO3Za3tby5xh3nJf1QpmXHQLB-zfaEWnylbnES5qUrN2L1FgnFUyJKkJ6d_Wc6u246vNClRfsVR7_BP47jDOXRJ10ttoHaqKKyzvyrAPHDb8Pd7o5AAc13QizETKvsFrwIWSnTQ_LRtWTVAZL9oJ_IacrFSj7umupQzF-151TuEN2cLqvUBVEHvPA0q8Zkc4pKdhxAEFqu6KHv39hd2qPpAqd8qLsqpebsR-MSuOQkWXi7g1ZB9J_Hz3BEzqV75LNXc7jENVFwf6LUPsGDXj4YVxxPXDuxtAR_0CxU2vWWQE8h-bizHyCrId3VJBIa9Wv6vwz8igN0hlfoykdxy6-qFksdTqH-DwSW75i3OxF2",
+    "W": "kCTvyWuXZv918NUfBT2RxUdPiLQeCzm8xhDsE_0lCizdmxZTtJPxhMD8HbnvvXuDHa5sWNb6imtDlAbHpvlEIG05Za3BJ_2euZqwyPbeI1o"
+  },
+  "after": {
+    "W": "DBn7zQ6n-EHL50EZiNKH3uIWzvef3tMdvhYuqWvq1gkeoxTsjGcMzxvhEvJu0LymjlkautRWF5IsKPdgN7elHCCHfLgbBHeII4yc6gWGoWo",
+    "approval": {
+      "v": 1,
+      "type": "bl.rewrap",
+      "orgId": "org_vector",
+      "profileId": "11111111-2222-4333-8444-555555555555",
+      "credentialVersion": 3,
+      "fromKid": "ck_nFYIpqbN5nse1k-J0bVvmo",
+      "toKid": "ck_rRS-wSaseSweYnUVcidVUB",
+      "wHash": "DUFOSOr6Qayf-8RWvjCKP20zEVhFsfsRDhIqQ0aiDJw",
+      "decidedAt": "2026-11-06T10:00:00.000Z"
+    },
+    "approvalSig": "3ZqzHXAeFYRWscFjrf8tLqpME85Wy2wB0LC_h7AeInOX8Z1dg9svSGDBnJlbCBVRXLtY6IWXa_ITVHHAizl3Cg"
+  }
+}

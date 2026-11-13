@@ -63,3 +63,6 @@ export type {
   WebhookEvent,
   WebhookEventType,
 } from './types';
+
+// Explicit v2 API (customer-held key). The default export keeps its v1 behaviour.
+export { BanklinkV2 } from './v2';
