@@ -1,3 +1,10 @@
+import type { BankProgress } from './bankProgress';
+
+export interface BankOperationOptions {
+  onProgress?: (progress: BankProgress) => void | Promise<void>;
+  timeoutMs?: number;
+}
+
 export interface BanklinkOptions {
   apiKey: string;
   baseUrl?: string;
@@ -40,10 +47,11 @@ export interface SyncResult {
 }
 
 export interface LinkResult {
-  type: 'success' | 'mfa_required' | 'error';
+  type: 'success' | 'error' | 'invalid_credentials' | 'account_locked' | 'no_accounts_linked' | 'account_not_found' | 'approval_not_given' | 'online_banking_disabled' | 'customer_action_required' | 'qr_handoff_required' | 'portal_contract_changed';
   profile_id?: string;
   account_number?: string | null;
-  session_token?: string;
+  synced?: number;
+  sync_failed?: boolean;
   message?: string;
 }
 
@@ -69,15 +77,12 @@ export interface ListParams {
   cursor?: string;
 }
 
-export interface LinkCreateParams {
+export interface LinkCreateParams extends BankOperationOptions {
   bankId: string;
   credentials: Record<string, string>;
   nickname?: string;
-}
-
-export interface LinkOtpParams {
-  sessionToken: string;
-  otp: string;
+  saveCredentials?: boolean;
+  syncTransactions?: boolean;
 }
 
 export type RequestDestination =

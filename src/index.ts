@@ -46,8 +46,8 @@ export type {
   ApiKeyInfo,
   Balance,
   BanklinkOptions,
+  BankOperationOptions,
   LinkCreateParams,
-  LinkOtpParams,
   LinkResult,
   LinkRequestCreateParams,
   ListParams,
@@ -66,3 +66,5 @@ export type {
 
 // Explicit v2 API (customer-held key). The default export keeps its v1 behaviour.
 export { BanklinkV2 } from './v2';
+
+export type { BankProgress, BankProgressStage, BankQrCode } from './bankProgress';
