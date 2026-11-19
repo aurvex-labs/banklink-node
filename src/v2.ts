@@ -8,7 +8,12 @@ export class KeyRequiredError extends CeremonyError { constructor(){ super('key_
 export class KeyMismatchError extends CeremonyError { constructor(){ super('kid_mismatch'); } }
 export class TicketInvalidError extends CeremonyError { constructor(){ super('ticket_invalid'); } }
 export class OtpRequiredError extends CeremonyError { constructor(){ super('otp_required'); } }
-export class BankLoginFailedError extends CeremonyError { constructor(){ super('bank_login_failed'); } }
+export class BankLoginFailedError extends CeremonyError { constructor(code: 'bank_login_failed' | 'online_banking_disabled' = 'bank_login_failed'){ super(code); } }
+/**
+ * The bank has online banking switched off for this profile (Capitec: Online Banking off in the app).
+ * A BankLoginFailedError, so existing handlers still catch it. The account holder switches it on, then retries.
+ */
+export class OnlineBankingDisabledError extends BankLoginFailedError { constructor(){ super('online_banking_disabled'); } }
 /** The bank asked for approval in its app (e.g. Standard Bank) and the customer didn't give it in time. */
 export class ApprovalNotGivenError extends CeremonyError { constructor(){ super('approval_not_given'); } }
 export class JobExpiredError extends CeremonyError { constructor(){ super('job_expired'); } }
@@ -18,6 +23,7 @@ function error(code: unknown, status=0): CeremonyError {
   if(code==='kid_mismatch') return new KeyMismatchError();
   if(code==='job_expired'||code==='ticket_expired') return new JobExpiredError();
   if(code==='bank_login_failed') return new BankLoginFailedError();
+  if(code==='online_banking_disabled') return new OnlineBankingDisabledError();
   if(code==='approval_not_given') return new ApprovalNotGivenError();
   return new CeremonyError(typeof code==='string'&&safeCodes.has(code)?code:'api_error',status);
 }
@@ -40,6 +46,8 @@ export type JobStatus =
   | { stage: 'preparing' }
   | { stage: 'signing_in' }
   | { stage: 'awaiting_approval'; expiresAt: string; resent?: boolean }
+  | { stage: 'awaiting_qr_scan'; image: string; expiresAt: string; attempt: number }
+  | { stage: 'qr_expired'; retryUntil: string; requestRetry: () => Promise<void> }
   | { stage: 'awaiting_otp' }
   | { stage: 'fetching' }
   | { stage: 'decrypting' };
@@ -52,7 +60,13 @@ export interface CreateOptions extends JobOptions { bank:string; fields:Record<s
 type KeyInfo = c.CustomerPublicKey & {orgId:string;createdAt:string};
 const segment=(id:string)=>encodeURIComponent(id);
 /** The API's coarse login stage, reduced to known values; anything else reads as signing in. */
-function progress(p:any):JobStatus {
+function progress(p:any, requestRetry: () => Promise<void>):JobStatus {
+  if(p?.stage==='awaiting_qr_scan' && typeof p.qrImage==='string' && p.qrImage.length<=200000 &&
+    /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/]+=*$/.test(p.qrImage) && typeof p.qrExpiresAt==='string' &&
+    Number.isFinite(Date.parse(p.qrExpiresAt)) && Number.isSafeInteger(p.qrAttempt) && p.qrAttempt>0)
+    return {stage:'awaiting_qr_scan',image:p.qrImage,expiresAt:p.qrExpiresAt,attempt:p.qrAttempt};
+  if(p?.stage==='qr_expired' && typeof p.retryUntil==='string' && Number.isFinite(Date.parse(p.retryUntil)))
+    return {stage:'qr_expired',retryUntil:p.retryUntil,requestRetry};
   if(p?.stage==='fetching')return {stage:'fetching'};
   if(p?.stage==='awaiting_approval'&&typeof p.approvalExpiresAt==='string'&&Number.isFinite(Date.parse(p.approvalExpiresAt)))
     return {stage:'awaiting_approval',expiresAt:new Date(Date.parse(p.approvalExpiresAt)).toISOString(),...(p.resent===true?{resent:true}:{})};
@@ -222,7 +236,7 @@ export class BanklinkV2 {
         const state=await this.http(`/jobs/${segment(req.jobId)}`,'GET',undefined,signal);
         if(state.jobId!==req.jobId)throw new TicketInvalidError();
         if(state.status==='completed') { if(!state.sealedResult)throw new CeremonyError('result_unavailable');status({stage:'decrypting'});try{return await c.customerOpenResult(state.sealedResult,keys,built.ticketHash,req.jobId);}catch{throw new TicketInvalidError();} }
-        if(state.status==='running')status(progress(state.progress));
+        if(state.status==='running')status(progress(state.progress,async()=>{check();await this.http(`/jobs/${segment(req.jobId)}/qr-retry`,'POST',{},signal);}));
         if(state.status==='awaiting_otp') {
           status({stage:'awaiting_otp'});
           if(!opts.onOtp)throw new OtpRequiredError();if(++otpCount>3)throw new CeremonyError('otp_limit');

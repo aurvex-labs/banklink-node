@@ -6,7 +6,8 @@ import {
   OrgNotVerifiedError,
   RateLimitError,
 } from './errors';
-import type { BanklinkOptions } from './types';
+import type { BanklinkOptions, BankOperationOptions } from './types';
+import { readBankProgress } from './bankProgress';
 
 const DEFAULT_BASE_URL = 'https://api.banklink.co.za/v1';
 const DEFAULT_TIMEOUT = 30_000;
@@ -23,15 +24,17 @@ export class Client {
     this.timeout = opts.timeout ?? DEFAULT_TIMEOUT;
   }
 
-  async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  async request<T>(method: string, path: string, body?: unknown, options?: BankOperationOptions): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeout);
+    const timeout = options?.timeoutMs ?? (options?.onProgress ? Math.max(this.timeout, 310_000) : this.timeout);
+    const timer = setTimeout(() => controller.abort(), timeout);
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.apiKey}`,
       'Content-Type': 'application/json',
       'User-Agent': `banklink-node/${SDK_VERSION}`,
+      ...(options?.onProgress ? { Accept: 'application/x-ndjson' } : {}),
     };
 
     let response: Response;
@@ -46,63 +49,70 @@ export class Client {
       clearTimeout(timer);
       if (err instanceof Error && err.name === 'AbortError') {
         throw new BanklinkError(
-          `Request timed out after ${this.timeout}ms`,
+          `Request timed out after ${timeout}ms`,
           'timeout',
           0,
         );
       }
       throw err;
-    } finally {
-      clearTimeout(timer);
     }
 
-    if (!response.ok) {
-      let errorMessage: string | undefined;
-      let errorCode: string | undefined;
-      try {
-        // v1 errors are { error: { code, message } }; tolerate { error: "..." } too.
-        const errorBody = (await response.json()) as {
-          error?: string | { code?: string; message?: string };
-          message?: string;
-        };
-        if (errorBody.error && typeof errorBody.error === 'object') {
-          errorMessage = errorBody.error.message;
-          errorCode = errorBody.error.code;
-        } else {
-          errorMessage = errorBody.error ?? errorBody.message;
+    try {
+      if (!response.ok) {
+        let errorMessage: string | undefined;
+        let errorCode: string | undefined;
+        try {
+          // v1 errors are { error: { code, message } }; tolerate { error: "..." } too.
+          const errorBody = (await response.json()) as {
+            error?: string | { code?: string; message?: string };
+            message?: string;
+          };
+          if (errorBody.error && typeof errorBody.error === 'object') {
+            errorMessage = errorBody.error.message;
+            errorCode = errorBody.error.code;
+          } else {
+            errorMessage = errorBody.error ?? errorBody.message;
+          }
+        } catch {
+          // ignore JSON parse failures on error body
         }
-      } catch {
-        // ignore JSON parse failures on error body
+
+        if (errorCode === 'org_not_verified') throw new OrgNotVerifiedError(errorMessage);
+
+        switch (response.status) {
+          case 401:
+            throw new AuthenticationError(errorMessage);
+          case 402:
+            throw new InsufficientCreditsError(errorMessage);
+          case 404:
+            throw new NotFoundError(errorMessage);
+          case 429:
+            throw new RateLimitError(errorMessage);
+          default:
+            throw new BanklinkError(
+              errorMessage ?? `Unexpected error (HTTP ${response.status})`,
+              errorCode ?? 'api_error',
+              response.status,
+            );
+        }
       }
 
-      if (errorCode === 'org_not_verified') throw new OrgNotVerifiedError(errorMessage);
-
-      switch (response.status) {
-        case 401:
-          throw new AuthenticationError(errorMessage);
-        case 402:
-          throw new InsufficientCreditsError(errorMessage);
-        case 404:
-          throw new NotFoundError(errorMessage);
-        case 429:
-          throw new RateLimitError(errorMessage);
-        default:
-          throw new BanklinkError(
-            errorMessage ?? `Unexpected error (HTTP ${response.status})`,
-            errorCode ?? 'api_error',
-            response.status,
-          );
+      return options?.onProgress
+        ? await readBankProgress<T>(response, options.onProgress)
+        : await response.json() as T;
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new BanklinkError(`Request timed out after ${timeout}ms`, 'timeout', 0);
       }
-    }
-
-    return response.json() as Promise<T>;
+      throw err;
+    } finally { clearTimeout(timer); }
   }
 
   get<T>(path: string): Promise<T> {
     return this.request<T>('GET', path);
   }
 
-  post<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('POST', path, body);
+  post<T>(path: string, body?: unknown, options?: BankOperationOptions): Promise<T> {
+    return this.request<T>('POST', path, body, options);
   }
 }

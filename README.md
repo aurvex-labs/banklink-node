@@ -1,6 +1,6 @@
 # @banklink/sdk
 
-Official Banklink SDK for TypeScript and Node.js. Version **0.3.0**, Node 20+. The v2 client bundles `@banklink/crypto` with two production worker roots pinned. V2 is in limited preview: your organisation must be enabled and your live API key must have the explicit `v2` scope. Contact Banklink for access. Publishing the SDK does not enable v2 for an organisation. The Python SDK remains v1-only.
+Official Banklink SDK for TypeScript and Node.js. Version **0.4.0**, Node 20+. The v2 client bundles `@banklink/crypto` with two production worker roots pinned. V2 is in limited preview: your organisation must be enabled and your live API key must have the explicit `v2` scope. Contact Banklink for access. Publishing the SDK does not enable v2 for an organisation. The Python SDK remains v1-only.
 
 ## Customer-held-key v2
 
@@ -178,15 +178,34 @@ const result = await banklink.link.create({
 
 if (result.type === 'success') {
   console.log('Linked! Profile ID:', result.profile_id);
-} else if (result.type === 'mfa_required') {
-  // Submit OTP
-  const otpResult = await banklink.link.submitOtp({
-    sessionToken: result.session_token!,
-    otp: '123456',
-  });
-  console.log('OTP result:', otpResult.type);
 }
 ```
+
+Capitec uses `{ username }` and a QR scan at every sign-in. From 0.4.0, pass
+`onProgress` to `link.create` or `accounts.sync` to opt into
+the v1 progress stream:
+
+```typescript
+await banklink.link.create({
+  bankId: 'capitec', credentials: { username: accountNumber },
+  onProgress: async progress => {
+    if (progress.stage === 'awaiting_qr_scan') showQr(progress.qr.image, progress.qr.expiresAt);
+    if (progress.stage === 'qr_expired') {
+      // Ask the account holder; only request a replacement when they choose it.
+      if (await wantsNewCode(progress.retryUntil)) await banklink.link.requestQrRetry(progress.retryId);
+    }
+  },
+});
+```
+
+`showQr` and `wantsNewCode` are your UI functions. Retry offers last 15 seconds;
+v1 permits three codes per sign-in. Streaming calls allow 310 seconds by
+default; override with `timeoutMs`. Without `onProgress`, live Capitec returns
+`qr_handoff_required`. The old `submitOtp` method has been removed.
+
+For v2, `onStatus` receives `awaiting_qr_scan` with `image`, `expiresAt` and
+`attempt`, or `qr_expired` with `retryUntil` and a `requestRetry()` action.
+Call the action only after the account holder asks. v2 permits two codes.
 
 ## Hosted request links
 

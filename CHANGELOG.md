@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 2026-11-19
+
+- Capitec QR progress for v1 link and manual sync, with an explicit retry within
+  15 seconds. The old Capitec OTP method and session token are removed.
+- v2 QR scan statuses and a retry action on `qr_expired`, so Capitec works in v2.
+- Add `OnlineBankingDisabledError` (`online_banking_disabled`), a subclass of
+  `BankLoginFailedError`, for Capitec profiles with Online Banking switched off.
+
 ## 0.3.0 — 2026-11-13
 
 - Add `BanklinkV2` for customer-held keys, encrypted profiles, sealed jobs and local result decryption. V2 requires an enabled organisation and an explicitly scoped live API key.
