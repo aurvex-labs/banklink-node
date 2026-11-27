@@ -17,7 +17,7 @@ export class OnlineBankingDisabledError extends BankLoginFailedError { construct
 /** The bank asked for approval in its app (e.g. Standard Bank) and the customer didn't give it in time. */
 export class ApprovalNotGivenError extends CeremonyError { constructor(){ super('approval_not_given'); } }
 export class JobExpiredError extends CeremonyError { constructor(){ super('job_expired'); } }
-const safeCodes = new Set(['unauthorized','forbidden','key_exists','profile_exists','profile_not_found','job_not_found','job_exists','approval_invalid','worker_busy','payload_too_large','rotation_incomplete','rotation_conflict','invalid_request','not_found','bank_unavailable','otp_invalid','decrypt_failed','release_invalid','worker_session_lost','rate_limited','ip_not_allowed','test_key_not_supported']);
+const safeCodes = new Set(['unauthorized','forbidden','key_exists','profile_exists','profile_not_found','job_not_found','job_exists','approval_invalid','worker_busy','payload_too_large','rotation_incomplete','rotation_conflict','invalid_request','not_found','bank_unavailable','otp_invalid','decrypt_failed','release_invalid','worker_session_lost','rate_limited','ip_not_allowed','test_key_not_supported','org_not_verified','request_not_completed','result_unavailable','customer_key_required','customer_key_not_found','customer_key_not_active','request_unavailable']);
 function error(code: unknown, status=0): CeremonyError {
   if(code==='key_required') return new KeyRequiredError();
   if(code==='kid_mismatch') return new KeyMismatchError();
@@ -58,6 +58,35 @@ export interface JobOptions extends c.ReleaseRequestParams {
 }
 export interface CreateOptions extends JobOptions { bank:string; fields:Record<string,string>; nickname?:string }
 type KeyInfo = c.CustomerPublicKey & {orgId:string;createdAt:string};
+/** A hosted link (`kind: 'link'`, saves a profile) or access request (`'access'`, one fetch), completed on link.banklink.co.za. */
+export interface V2HostedRequestInput {
+  /** Your internal reference. Customers see your verified organisation name. */
+  reference: string;
+  /** Fix the bank; otherwise the customer picks one. */
+  bankId?: string;
+  /** Bind a saved link to a registered customer key (`ck_…`). Omit to use the active key. */
+  customerKeyId?: string;
+  /** Transactions from/to (YYYY-MM-DD), sealed into the fetch like `sync`'s fromDate/toDate. */
+  dateFrom?: string; dateTo?: string;
+  expiresAt?: string;
+  /** Where the customer goes afterwards (https, on your verified domain). */
+  redirectUrl?: string;
+  /** Signed completion notice (ids only, never bank data), on your verified domain. */
+  webhookUrl?: string;
+}
+export interface V2HostedRequest {
+  id:string; kind:'link'|'access'; status:'pending'|'completed'|'expired'|'revoked'; reference:string; bankId:string|null;
+  /** The customer key a saved link is locked to, if any. */
+  customerKeyId:string|null;
+  /** Send this to your customer. */
+  url:string;
+  dateRange:{dateFrom?:string;dateTo?:string}; redirectUrl:string|null; webhookUrl:string|null;
+  /** Once completed: the saved profile (link requests), and the job whose result `result()` opens. */
+  profileId:string|null; jobId:string|null;
+  /** Why the customer's last attempt failed, e.g. bank_login_failed. The request stays open for a retry. */
+  lastError:string|null;
+  createdAt:string; expiresAt:string|null; completedAt:string|null;
+}
 const segment=(id:string)=>encodeURIComponent(id);
 /** The API's coarse login stage, reduced to known values; anything else reads as signing in. */
 function progress(p:any, requestRetry: () => Promise<void>):JobStatus {
@@ -129,6 +158,18 @@ export class BanklinkV2 {
     }catch{throw new TicketInvalidError();}
   }
   readonly keys={
+    /** Make a private customer seed locally. Back it up in your secret manager before using it. */
+    generate: (): string => c.encodeSeed(c.generateSeed()),
+    /**
+     * Export only the signed public registration for Settings → Customer keys.
+     * Pass the organisation id shown in Settings to generate it without a network call.
+     * The private seed stays in this process and is never included in the export.
+     */
+    publicKey: async (orgId?: string): Promise<string> => {
+      const keys = await this.local();
+      const registration = c.signKeyRegistration(keys, orgId ?? await this.org());
+      return 'blpub_v1_' + Buffer.from(JSON.stringify(registration), 'utf8').toString('base64url');
+    },
     /** Back up the returned seed durably. Interactive callers should pass a seed already backed up. */
     init: async (seed=c.encodeSeed(c.generateSeed())) => { const k=await this.local(seed);const org=await this.org();await this.http('/keys','POST',c.signKeyRegistration(k,org));this.seed=seed;return seed; },
     current: async ():Promise<KeyInfo> => { const info=await this.http('/keys/current');if(info.kid!==(await this.local()).kid)throw new KeyMismatchError();return info; },
@@ -167,6 +208,41 @@ export class BanklinkV2 {
     },
   };
   readonly banks={list:():Promise<Bank[]>=>this.http('/banks')};
+  private hostedRequests(path:'link-requests'|'access-requests') {
+    return {
+      create:(input:V2HostedRequestInput):Promise<V2HostedRequest>=>this.http(`/${path}`,'POST',input),
+      get:(id:string):Promise<V2HostedRequest>=>this.http(`/${path}/${segment(id)}`),
+      revoke:async(id:string)=>{await this.http(`/${path}/${segment(id)}`,'DELETE');},
+      /**
+       * The completed request's result, opened with your key: the account list for a link request,
+       * the transactions for an access request. One collection only, within 24 hours of completion.
+       */
+      result:async(id:string):Promise<{jobId:string;profileId:string|null;bankId:string;data:unknown}>=>{
+        const r:V2HostedRequest=await this.hostedRequests(path).get(id);
+        if(r.id!==id||r.status!=='completed'||!r.jobId)throw new CeremonyError('request_not_completed');
+        // Results remain locked to the request's original key after a rotation.
+        // Check before the one-time collection so the wrong key cannot consume them.
+        const keys = await this.local();
+        if (r.customerKeyId && keys.kid !== r.customerKeyId) throw new KeyMismatchError();
+        const orgId = await this.org();
+        if (!r.customerKeyId) await this.keys.current();
+        const hosts = await this.hosts(AbortSignal.timeout(this.options.requestTimeoutMs ?? 10000));
+        const state=await this.http(`/jobs/${segment(r.jobId)}`);
+        if(state.jobId!==r.jobId||state.status!=='completed'||!state.sealedResult||!state.ticket)throw new CeremonyError('result_unavailable');
+        try{
+          // The customer's browser checked this ticket when the job ran; check it again here, as at its issue time.
+          const t=c.verifyTicket(state.ticket,state.ticketSig,hosts,{orgId,profileId:r.profileId,bankId:state.ticket.bankId,operation:r.kind==='link'?'link':'sync',releaseMode:'fields',credentialVersion:null},
+            {now:()=>new Date(Date.parse(state.ticket.issuedAt))});
+          if(t.jobId!==r.jobId||(r.bankId&&t.bankId!==r.bankId))throw new TicketInvalidError();
+          return {jobId:r.jobId,profileId:r.profileId,bankId:t.bankId,data:await c.customerOpenResult(state.sealedResult,keys,c.ticketHash(t),r.jobId)};
+        }catch{throw new TicketInvalidError();}
+      },
+    };
+  }
+  /** Hosted links that save a profile: the customer signs in on link.banklink.co.za; you sync the profile later. */
+  readonly linkRequests=this.hostedRequests('link-requests');
+  /** Hosted one-off fetches: nothing is saved; collect the transactions with `result()`. */
+  readonly accessRequests=this.hostedRequests('access-requests');
   readonly profiles={
     list:():Promise<ProfileMetadata[]>=>this.http('/profiles'),
     delete:async(id:string)=>{await this.http(`/profiles/${segment(id)}`,'DELETE');},

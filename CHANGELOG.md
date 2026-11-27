@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 — 2026-11-27
+
+- Add customer-key hosted link and access requests with creation, status, revocation and one-time sealed-result collection.
+- Add local private-seed generation and signed public-key export for named dashboard customer keys.
+- Bind saved hosted links to a selected customer key and expose hosted request types.
+- Keep completed results collectible with their original key after rotation and reject mismatched keys before collection.
+- Preserve safe customer-key error codes in the v2 client.
+
 ## 0.4.0 — 2026-11-19
 
 - Capitec QR progress for v1 link and manual sync, with an explicit retry within

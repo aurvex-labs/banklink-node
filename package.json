@@ -1,6 +1,6 @@
 {
   "name": "@banklink/sdk",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Official Banklink SDK for TypeScript and Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

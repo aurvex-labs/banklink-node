@@ -1,6 +1,6 @@
 # @banklink/sdk
 
-Official Banklink SDK for TypeScript and Node.js. Version **0.4.0**, Node 20+. The v2 client bundles `@banklink/crypto` with two production worker roots pinned. V2 is in limited preview: your organisation must be enabled and your live API key must have the explicit `v2` scope. Contact Banklink for access. Publishing the SDK does not enable v2 for an organisation. The Python SDK remains v1-only.
+Official Banklink SDK for TypeScript and Node.js. Version **0.5.0**, Node 20+. The v2 client bundles `@banklink/crypto` with two production worker roots pinned. V2 is in limited preview: your organisation must be enabled and your live API key must have the explicit `v2` scope. Contact Banklink for access. Publishing the SDK does not enable v2 for an organisation. The Python SDK remains v1-only.
 
 ## Customer-held-key v2
 
@@ -34,6 +34,29 @@ Back up seeds **before** registration/rotation. SDK `keys.init()` returns a gene
 Default bounds: HTTP 10 seconds/3 MiB, job execution 240 seconds, polling from 250 ms backing off to 2 s, at most three OTP prompts. Options: `requestTimeoutMs`, `timeoutMs`, `pollIntervalMs`. Releases, OTP and collection are never retried, except after a 429 (refused before it was handled, so safe to resend). If a release/collection response is lost, start a fresh job; the result may be unrecoverable. Failures attempt DELETE with an independent HTTP deadline; worker TTL is the fallback. A create response lost before the job id is known cannot be explicitly cancelled. Profile creation may have succeeded even if verification fails; inspect metadata and verify or delete it.
 
 Typed coarse errors from `/v2`: `KeyRequiredError`, `KeyMismatchError`, `TicketInvalidError`, `OtpRequiredError`, `BankLoginFailedError`, `JobExpiredError`, base `CeremonyError` with `code`. HTTP 429 is retried up to four times when `Retry-After` is 15 s or less; a longer `Retry-After` (for example the per-profile limit of 3 bank logins per 10 minutes) fails at once as `rate_limited` with `retryAfterMs`. Limits are per organisation, shared by all its keys: 60 requests a minute (job polls counted separately) and 10 bank logins a minute. No raw transport errors/stacks or remote messages are exposed by v2. HTTPS is required except loopback HTTP. Test roots require explicit constructor `test: {allowTestRoot: true}`;  Production empty pins fail closed. Host-list versions are monotonic in memory. Optional `FileVersionCache` uses private files, serializes writes within its instance and must have one process/instance owner; use a serialized external `VersionCache` for concurrent processes. Protect backups/cache against deletion/rollback with your local security policy.
+
+## Hosted links and named public keys
+
+Create a saved hosted link for a customer using your organisation's approved merchant profile and active customer key. The hosted page encrypts the login with that key. Your application collects the account details and authorises later fetches.
+
+```ts
+const link = await banklink.linkRequests.create({
+  reference: 'customer-4821',
+  customerKeyId: (await banklink.keys.current()).kid,
+  bankId: 'fnb',
+});
+// Send link.url to the account holder, then wait for completion.
+const { profileId, data } = await banklink.linkRequests.result(link.id);
+const transactions = await banklink.profiles.sync(profileId!);
+```
+
+`linkRequests` and `accessRequests` provide `create`, `get`, `revoke` and `result`. `result` opens the sealed result once within 24 hours of completion. A completed result stays encrypted with its original key through rotation, so retain that seed until its outstanding results have been collected or expired. Completion webhooks contain ids only. Saved hosted links currently support FNB, Standard Bank and Capitec for enabled organisations.
+
+Use `banklink.keys.generate()` to generate a private seed locally. Back it up in your secret manager and configure the client with `key` or `keyProvider`. `await banklink.keys.publicKey(workspaceId)` exports the signed public registration beginning with `blpub_v1_`, which you can name and add under Settings → Customer keys. Passing the workspace id makes the export local. Omitting it resolves the organisation through the API. The private seed stays in your systems.
+
+Each organisation has one active customer key. The stable `ck_…` id selects it in the SDK's `customerKeyId` field or `customer_key_id` on `POST /v1/link-requests`. Pending links must be recreated after rotating away from their selected key.
+
+The hosted-link API and dashboard changes require the corresponding server rollout. SDK publication preserves the organisation enablement gate.
 
 ## One-off fetches and progress
 
